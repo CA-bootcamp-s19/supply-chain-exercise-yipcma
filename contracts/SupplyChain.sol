@@ -40,8 +40,8 @@ contract SupplyChain {
     uint sku;
     uint price;
     State state;
-    address seller;
-    address buyer;
+    address payable seller;
+    address payable buyer;
   }
 
   /* Create 4 events with the same name as each possible State (see above)
@@ -55,10 +55,20 @@ contract SupplyChain {
 
 /* Create a modifier that checks if the msg.sender is the owner of the contract */
 
-  modifier onlyOwner() {require (msg.sender == owner); _;}
-  modifier verifyCaller (address _address) {require (msg.sender == _address); _;}
+  modifier onlyOwner() {
+    require (msg.sender == owner, "Sender should be owner");
+    _;
+  }
+  modifier verifyCaller (address _address) {
+    require (msg.sender == _address, "sender should be this address");
+    _;
+  }
 
-  modifier paidEnough(uint _price) {require(msg.value >= _price); _;}
+  modifier paidEnough(uint _price) {
+    require(msg.value >= _price, "Should pay enough");
+     _;
+  }
+  
   modifier checkValue(uint _sku) {
     //refund them after pay for item (why it is before, _ checks for logic before func)
     _;
@@ -69,20 +79,32 @@ contract SupplyChain {
 
   /* For each of the following modifiers, use what you learned about modifiers
    to give them functionality. For example, the forSale modifier should require
-   that the item with the given sku has the state ForSale. 
+   that the item with the given sku has the state ForSale.
    Note that the uninitialized Item.State is 0, which is also the index of the ForSale value,
    so checking that Item.State == ForSale is not sufficient to check that an Item is for sale.
    Hint: What item properties will be non-zero when an Item has been added?
    */
-  modifier forSale(uint _sku) {require(items[_sku].state == State.ForSale); _;} // TODO: unclear the requirement here
-  modifier sold(uint _sku) {require(items[_sku].state == State.Sold); _;}
-  modifier shipped(uint _sku) {require(items[_sku].state == State.Shipped); _;}
-  modifier received(uint _sku) {require(items[_sku].state == State.Received); _;}
+  modifier forSale(uint _sku) {
+    require(items[_sku].state == State.ForSale && items[_sku].seller != address(0), "Item should be ForSale");
+    _;
+  }
+  modifier sold(uint _sku) {
+    require(items[_sku].state == State.Sold, "Item should be Sold");
+    _;
+  }
+  modifier shipped(uint _sku) {
+    require(items[_sku].state == State.Shipped, "Item should be Shipped");
+    _;
+  }
+  modifier received(uint _sku) {
+    require(items[_sku].state == State.Received, "Item should be Received");
+    _;
+  }
 
   constructor() public {
     /* Here, set the owner as the person who instantiated the contract
        and set your skuCount to 0. */
-       owner = msg.sender;
+    owner = msg.sender;
   }
 
   function addItem(string memory _name, uint _price) public returns(bool){
@@ -105,7 +127,7 @@ contract SupplyChain {
     paidEnough(items[sku].price)
     checkValue(sku)
   {
-    items[sku].seller.transfer(msg.sender.value);
+    items[sku].seller.transfer(msg.value);
     items[sku].buyer = msg.sender;
     items[sku].state = State.Sold;
     emit LogSold(sku);
@@ -143,5 +165,4 @@ contract SupplyChain {
     buyer = items[_sku].buyer;
     return (name, sku, price, state, seller, buyer);
   }
-
 }
